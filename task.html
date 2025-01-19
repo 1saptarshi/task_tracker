@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Tracker Grid</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
+  <div class="bg-white shadow-lg rounded-lg p-6 w-full max-w-4xl">
+    <h1 class="text-3xl font-bold text-center mb-6 text-blue-600">Task Tracker</h1>
+
+    <!-- Task Input Form -->
+    <form id="taskForm" class="mb-6 flex flex-wrap gap-4">
+      <div class="flex-1">
+        <label for="taskText" class="block text-sm font-medium text-gray-700 mb-1">Task Name</label>
+        <input
+          type="text"
+          id="taskText"
+          placeholder="e.g., Complete coding project"
+          class="border border-gray-300 rounded-lg p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+          required
+        />
+      </div>
+      <div>
+        <label for="startDate" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+        <input
+          type="date"
+          id="startDate"
+          class="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          required
+        />
+      </div>
+      <div>
+        <label for="endDate" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+        <input
+          type="date"
+          id="endDate"
+          class="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          required
+        />
+      </div>
+      <button
+        type="submit"
+        class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition"
+      >
+        Add Task
+      </button>
+    </form>
+
+    <!-- Task Grid -->
+    <div id="taskGridContainer" class="overflow-x-auto">
+      <table class="min-w-full table-auto border-collapse border border-gray-300 text-center">
+        <thead>
+          <tr id="gridHeader" class="bg-gray-100">
+            <th class="border border-gray-300 p-2 text-left">Task</th>
+          </tr>
+        </thead>
+        <tbody id="taskGridBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const taskForm = document.getElementById("taskForm");
+    const gridHeader = document.getElementById("gridHeader");
+    const taskGridBody = document.getElementById("taskGridBody");
+
+    const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+
+    // Save tasks to localStorage
+    const saveTasks = () => {
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+    };
+
+    // Generate date range between startDate and endDate
+    const generateDateRange = (startDate, endDate) => {
+      const dates = [];
+      let currentDate = new Date(startDate);
+
+      while (currentDate <= new Date(endDate)) {
+        dates.push(new Date(currentDate).toISOString().split("T")[0]); // Format as yyyy-mm-dd
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      return dates;
+    };
+
+    // Render the grid
+    const renderGrid = () => {
+      // Clear previous grid
+      gridHeader.innerHTML = `<th class="border border-gray-300 p-2 text-left">Task</th>`;
+      taskGridBody.innerHTML = "";
+
+      // Generate unique date headers
+      const uniqueDates = new Set();
+      tasks.forEach((task) => {
+        task.dateRange.forEach((date) => uniqueDates.add(date));
+      });
+      const sortedDates = Array.from(uniqueDates).sort();
+
+      // Add date columns to header
+      sortedDates.forEach((date) => {
+        const th = document.createElement("th");
+        th.className = "border border-gray-300 p-2";
+        th.textContent = date;
+        gridHeader.appendChild(th);
+      });
+
+      // Add task rows
+      tasks.forEach((task, taskIndex) => {
+        const tr = document.createElement("tr");
+        tr.className = "border border-gray-300";
+
+        // Task Name Cell
+        const tdTask = document.createElement("td");
+        tdTask.className = "border border-gray-300 p-2 text-left font-medium text-gray-800";
+        tdTask.textContent = task.name;
+        tr.appendChild(tdTask);
+
+        // Date Cells
+        sortedDates.forEach((date) => {
+          const td = document.createElement("td");
+          td.className = "border border-gray-300 p-2";
+
+          if (task.dateRange.includes(date)) {
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = task.completedDates.includes(date);
+            checkbox.addEventListener("change", () => {
+              if (checkbox.checked) {
+                task.completedDates.push(date);
+              } else {
+                task.completedDates = task.completedDates.filter((d) => d !== date);
+              }
+              saveTasks();
+            });
+            td.appendChild(checkbox);
+          }
+
+          tr.appendChild(td);
+        });
+
+        taskGridBody.appendChild(tr);
+      });
+    };
+
+    // Add task
+    taskForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const taskText = document.getElementById("taskText").value;
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+
+      if (new Date(startDate) > new Date(endDate)) {
+        alert("Start date must be earlier than or equal to the end date.");
+        return;
+      }
+
+      const dateRange = generateDateRange(startDate, endDate);
+      tasks.push({ name: taskText, dateRange, completedDates: [] });
+
+      saveTasks();
+      renderGrid();
+      taskForm.reset();
+    });
+
+    // Initial render
+    renderGrid();
+  </script>
+</body>
+</html>
